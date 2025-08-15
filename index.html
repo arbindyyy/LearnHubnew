@@ -488,6 +488,151 @@
             border-color: #333;
         }
 
+        /* Calculator Area Animations */
+        .calculator-header {
+            animation: fadeInDown 0.4s ease forwards;
+        }
+        .calculator-body {
+            background-color: var(--card-bg-color);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px var(--shadow-color);
+            animation: fadeInUp 0.5s ease forwards;
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Calculator Form & Results */
+        .calculator-form {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+        @media (min-width: 600px) {
+            .calculator-form {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .form-group label {
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .form-group input {
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background: var(--background-color);
+            font-size: 16px;
+            color: var(--text-color);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 20%, transparent);
+        }
+        .calc-button {
+            padding: 15px;
+            border-radius: 8px;
+            border: none;
+            background: var(--primary-color);
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            grid-column: 1 / -1; /* Span full width */
+        }
+        .calc-button:hover {
+            background: color-mix(in srgb, var(--primary-color) 85%, black);
+        }
+
+        .calculator-results {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+        .calculator-results .error {
+            color: #e24a4a;
+            text-align: center;
+            font-weight: 500;
+        }
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            background-color: var(--background-color);
+            transition: background-color 0.3s;
+        }
+        .result-item span:first-child {
+            font-weight: 500;
+        }
+        .result-item .value {
+            font-size: 20px;
+            font-weight: 700;
+        }
+        .result-item.total {
+            background-color: color-mix(in srgb, var(--primary-color) 15%, transparent);
+        }
+        .result-item.total .value {
+            color: var(--primary-color);
+            font-size: 24px;
+        }
+
+        /* Amortization Schedule */
+        .calc-button.secondary {
+            background-color: #6c757d;
+            font-size: 16px;
+            padding: 12px 20px;
+        }
+        .calc-button.secondary:hover {
+            background-color: #5a6268;
+        }
+        .amortization-table-container {
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+        .amortization-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        .amortization-table th, .amortization-table td {
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 12px;
+            text-align: right;
+        }
+        .amortization-table tr:last-child td {
+            border-bottom: none;
+        }
+        .amortization-table thead {
+            background-color: var(--background-color);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .amortization-table tbody tr:nth-child(even) {
+            background-color: var(--background-color);
+        }
+
 
         /* Responsive */
         @media (max-width: 768px) {
@@ -1100,17 +1245,373 @@
                 }
             }
 
+            function formatCurrency(value) {
+                if (typeof value !== 'number') return value;
+                return value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+            }
+
+            function generateAmortizationSchedule(loanAmount, monthlyInterestRate, numberOfPayments, monthlyPayment) {
+                const scheduleDiv = document.getElementById('amortization-schedule');
+                let remainingBalance = loanAmount;
+                let tableHTML = `
+                    <div class="amortization-table-container">
+                        <table class="amortization-table">
+                            <thead>
+                                <tr>
+                                    <th>Month</th>
+                                    <th>Principal</th>
+                                    <th>Interest</th>
+                                    <th>Total Payment</th>
+                                    <th>Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                for (let i = 1; i <= numberOfPayments; i++) {
+                    const interestForMonth = remainingBalance * monthlyInterestRate;
+                    const principalForMonth = monthlyPayment - interestForMonth;
+                    remainingBalance -= principalForMonth;
+
+                    tableHTML += `
+                        <tr>
+                            <td>${i}</td>
+                            <td>${formatCurrency(principalForMonth)}</td>
+                            <td>${formatCurrency(interestForMonth)}</td>
+                            <td>${formatCurrency(monthlyPayment)}</td>
+                            <td>${formatCurrency(Math.abs(remainingBalance))}</td>
+                        </tr>
+                    `;
+                }
+
+                tableHTML += `</tbody></table></div>`;
+                scheduleDiv.innerHTML = tableHTML;
+            }
+
+            function calculateMortgage() {
+                const loanAmount = parseFloat(document.getElementById('loanAmount').value);
+                const interestRate = parseFloat(document.getElementById('interestRate').value);
+                const loanTerm = parseFloat(document.getElementById('loanTerm').value);
+                const resultDiv = document.getElementById('mortgageResult');
+                const scheduleDiv = document.getElementById('amortization-schedule');
+
+                scheduleDiv.innerHTML = ''; // Clear previous schedule
+
+                if (isNaN(loanAmount) || isNaN(interestRate) || isNaN(loanTerm) || loanAmount <= 0 || interestRate <= 0 || loanTerm <= 0) {
+                    resultDiv.innerHTML = '<p class="error">Please enter valid positive numbers for all fields.</p>';
+                    return;
+                }
+
+                const monthlyInterestRate = interestRate / 100 / 12;
+                const numberOfPayments = loanTerm * 12;
+
+                const monthlyPayment = loanAmount * (monthlyInterestRate * Math.pow(1 + monthlyInterestRate, numberOfPayments)) / (Math.pow(1 + monthlyInterestRate, numberOfPayments) - 1);
+
+                const totalPayment = monthlyPayment * numberOfPayments;
+                const totalInterest = totalPayment - loanAmount;
+
+                resultDiv.innerHTML = `
+                    <div class="result-item">
+                        <span>Monthly Payment</span>
+                        <span class="value">${formatCurrency(monthlyPayment)}</span>
+                    </div>
+                    <div class="result-item">
+                        <span>Total Principal Paid</span>
+                        <span class="value">${formatCurrency(loanAmount)}</span>
+                    </div>
+                    <div class="result-item">
+                        <span>Total Interest Paid</span>
+                        <span class="value">${formatCurrency(totalInterest)}</span>
+                    </div>
+                    <hr>
+                    <div class="result-item total">
+                        <span>Total Cost of Loan</span>
+                        <span class="value">${formatCurrency(totalPayment)}</span>
+                    </div>
+                    <div id="amortization-controls" style="text-align: center; margin-top: 20px;">
+                        <button id="showAmortizationBtn" class="calc-button secondary">Show Amortization Schedule</button>
+                    </div>
+                `;
+
+                document.getElementById('showAmortizationBtn').addEventListener('click', () => {
+                    generateAmortizationSchedule(loanAmount, monthlyInterestRate, numberOfPayments, monthlyPayment);
+                });
+            }
+
+            function calculateAmortization() {
+                const loanAmount = parseFloat(document.getElementById('loanAmountAmort').value);
+                const interestRate = parseFloat(document.getElementById('interestRateAmort').value);
+                const monthlyPayment = parseFloat(document.getElementById('monthlyPaymentAmort').value);
+                const maxLoanTerm = parseFloat(document.getElementById('loanTermAmort').value);
+                const scheduleDiv = document.getElementById('amortization-schedule');
+
+                if (isNaN(loanAmount) || isNaN(interestRate) || isNaN(monthlyPayment) || isNaN(maxLoanTerm) || loanAmount <= 0 || interestRate < 0 || monthlyPayment <= 0 || maxLoanTerm <= 0) {
+                    scheduleDiv.innerHTML = '<p class="error">Please enter valid positive numbers for all fields.</p>';
+                    return;
+                }
+
+                const monthlyInterestRate = interestRate / 100 / 12;
+                const firstMonthInterest = loanAmount * monthlyInterestRate;
+
+                if (monthlyPayment <= firstMonthInterest) {
+                    scheduleDiv.innerHTML = '<p class="error">Monthly payment is too low. It must be greater than the first month\'s interest of ' + formatCurrency(firstMonthInterest) + '.</p>';
+                    return;
+                }
+
+                const maxNumberOfPayments = maxLoanTerm * 12;
+
+                generateAmortizationSchedule(loanAmount, monthlyInterestRate, maxNumberOfPayments, monthlyPayment);
+            }
+
+            function calculateMortgagePayoff() {
+                const balance = parseFloat(document.getElementById('currentBalance').value);
+                const rate = parseFloat(document.getElementById('interestRatePayoff').value);
+                const monthlyPayment = parseFloat(document.getElementById('monthlyPaymentPayoff').value);
+                const extraPayment = parseFloat(document.getElementById('extraPayment').value) || 0;
+                const resultDiv = document.getElementById('payoffResult');
+
+                if (isNaN(balance) || isNaN(rate) || isNaN(monthlyPayment) || balance <= 0 || rate < 0 || monthlyPayment <= 0) {
+                    resultDiv.innerHTML = '<p class="error">Please enter valid numbers for balance, rate, and payment.</p>';
+                    return;
+                }
+
+                const monthlyRate = rate / 100 / 12;
+
+                // --- Scenario 1: Original Payoff ---
+                let originalMonths = 0;
+                let originalBalance = balance;
+                let totalInterestPaidOriginal = 0;
+                while (originalBalance > 0) {
+                    const interest = originalBalance * monthlyRate;
+                    if (monthlyPayment <= interest) {
+                         resultDiv.innerHTML = '<p class="error">Monthly payment is too low to pay off the loan.</p>';
+                         return;
+                    }
+                    const principal = monthlyPayment - interest;
+                    totalInterestPaidOriginal += interest;
+                    originalBalance -= principal;
+                    originalMonths++;
+                    if (originalMonths > 1000) {
+                        resultDiv.innerHTML = '<p class="error">Calculation exceeds maximum term.</p>';
+                        return;
+                    };
+                }
+
+                // --- Scenario 2: Accelerated Payoff ---
+                let newMonths = 0;
+                let newBalance = balance;
+                let totalInterestPaidNew = 0;
+                const newMonthlyPayment = monthlyPayment + extraPayment;
+                while (newBalance > 0) {
+                    const interest = newBalance * monthlyRate;
+                    if (newMonthlyPayment <= interest) {
+                         resultDiv.innerHTML = '<p class="error">With the extra payment, the monthly payment is still too low.</p>';
+                         return;
+                    }
+                    const principal = newMonthlyPayment - interest;
+                    totalInterestPaidNew += interest;
+                    newBalance -= principal;
+                    newMonths++;
+                    if (newMonths > 1000) break; // Safety break
+                }
+
+                const interestSaved = totalInterestPaidOriginal - totalInterestPaidNew;
+                const yearsSaved = Math.floor((originalMonths - newMonths) / 12);
+                const monthsSaved = (originalMonths - newMonths) % 12;
+
+                resultDiv.innerHTML = `
+                    <div class="result-item">
+                        <span>Payoff Time Saved</span>
+                        <span class="value">${yearsSaved} years, ${monthsSaved} months</span>
+                    </div>
+                    <div class="result-item">
+                        <span>Interest Saved</span>
+                        <span class="value">${formatCurrency(interestSaved)}</span>
+                    </div>
+                    <hr>
+                    <div class="result-item total">
+                        <span>New Payoff Term</span>
+                        <span class="value">${Math.floor(newMonths / 12)} years, ${newMonths % 12} months</span>
+                    </div>
+                `;
+            }
+
+            function calculateHouseAffordability() {
+                const annualIncome = parseFloat(document.getElementById('annualIncome').value);
+                const monthlyDebts = parseFloat(document.getElementById('monthlyDebts').value) || 0;
+                const downPayment = parseFloat(document.getElementById('downPayment').value) || 0;
+                const interestRate = parseFloat(document.getElementById('interestRateAfford').value);
+                const loanTerm = parseFloat(document.getElementById('loanTermAfford').value);
+                const resultDiv = document.getElementById('affordabilityResult');
+
+                if (isNaN(annualIncome) || isNaN(interestRate) || isNaN(loanTerm) || annualIncome <= 0 || interestRate <= 0 || loanTerm <= 0) {
+                    resultDiv.innerHTML = '<p class="error">Please enter valid numbers for income, rate, and term.</p>';
+                    return;
+                }
+
+                const monthlyIncome = annualIncome / 12;
+                const monthlyInterestRate = interestRate / 100 / 12;
+                const numberOfPayments = loanTerm * 12;
+
+                // Calculate max monthly payment based on 28/36 rule
+                const maxPaymentFromIncome = monthlyIncome * 0.28;
+                const maxPaymentFromDTI = (monthlyIncome * 0.36) - monthlyDebts;
+                const maxMonthlyPayment = Math.min(maxPaymentFromIncome, maxPaymentFromDTI);
+
+                if (maxMonthlyPayment <= 0) {
+                    resultDiv.innerHTML = '<p class="error">Your monthly debts are too high to afford a mortgage.</p>';
+                    return;
+                }
+
+                // Calculate max loan amount from the max monthly payment
+                const maxLoanAmount = (maxMonthlyPayment / monthlyInterestRate) * (1 - Math.pow(1 + monthlyInterestRate, -numberOfPayments));
+
+                const affordableHomePrice = maxLoanAmount + downPayment;
+
+                resultDiv.innerHTML = `
+                    <div class="result-item total">
+                        <span>Affordable Home Price</span>
+                        <span class="value">${formatCurrency(affordableHomePrice)}</span>
+                    </div>
+                    <hr>
+                    <div class="result-item">
+                        <span>Estimated Monthly Payment</span>
+                        <span class="value">${formatCurrency(maxMonthlyPayment)}</span>
+                    </div>
+                    <div class="result-item">
+                        <span>Max Loan Amount</span>
+                        <span class="value">${formatCurrency(maxLoanAmount)}</span>
+                    </div>
+                    <div class="result-item">
+                        <span>Your Down Payment</span>
+                        <span class="value">${formatCurrency(downPayment)}</span>
+                    </div>
+                `;
+            }
+
             function loadCalculator(name, id) {
                 const calcId = id.substring(1); // remove the '#'
+                let calculatorHTML = '';
+
+                if (id === '#mortgage-calculator') {
+                    calculatorHTML = `
+                        <div class="calculator-form">
+                            <div class="form-group">
+                                <label for="loanAmount">Loan Amount ($)</label>
+                                <input type="number" id="loanAmount" placeholder="e.g., 300000">
+                            </div>
+                            <div class="form-group">
+                                <label for="interestRate">Interest Rate (%)</label>
+                                <input type="number" id="interestRate" step="0.01" placeholder="e.g., 5.5">
+                            </div>
+                            <div class="form-group">
+                                <label for="loanTerm">Loan Term (Years)</label>
+                                <input type="number" id="loanTerm" placeholder="e.g., 30">
+                            </div>
+                            <button id="calculateMortgageBtn" class="calc-button">Calculate</button>
+                        </div>
+                        <div id="mortgageResult" class="calculator-results">
+                            <!-- Results will be displayed here -->
+                        </div>
+                        <div id="amortization-schedule"></div>
+                    `;
+                } else if (id === '#mortgage-payoff-calculator') {
+                    calculatorHTML = `
+                        <div class="calculator-form">
+                            <div class="form-group">
+                                <label for="currentBalance">Current Loan Balance ($)</label>
+                                <input type="number" id="currentBalance" placeholder="e.g., 280000">
+                            </div>
+                            <div class="form-group">
+                                <label for="interestRatePayoff">Interest Rate (%)</label>
+                                <input type="number" id="interestRatePayoff" step="0.01" placeholder="e.g., 5.5">
+                            </div>
+                            <div class="form-group">
+                                <label for="monthlyPaymentPayoff">Current Monthly Payment ($)</label>
+                                <input type="number" id="monthlyPaymentPayoff" step="0.01" placeholder="e.g., 1600">
+                            </div>
+                            <div class="form-group">
+                                <label for="extraPayment">Extra Monthly Payment ($)</label>
+                                <input type="number" id="extraPayment" step="0.01" placeholder="e.g., 200">
+                            </div>
+                            <button id="calculatePayoffBtn" class="calc-button">Calculate Payoff</button>
+                        </div>
+                        <div id="payoffResult" class="calculator-results"></div>
+                    `;
+                } else if (id === '#house-affordability-calculator') {
+                    calculatorHTML = `
+                        <div class="calculator-form">
+                            <div class="form-group">
+                                <label for="annualIncome">Annual Income ($)</label>
+                                <input type="number" id="annualIncome" placeholder="e.g., 80000">
+                            </div>
+                            <div class="form-group">
+                                <label for="monthlyDebts">Monthly Debts ($)</label>
+                                <input type="number" id="monthlyDebts" placeholder="e.g., 500">
+                            </div>
+                            <div class="form-group">
+                                <label for="downPayment">Down Payment ($)</label>
+                                <input type="number" id="downPayment" placeholder="e.g., 20000">
+                            </div>
+                            <div class="form-group">
+                                <label for="interestRateAfford">Interest Rate (%)</label>
+                                <input type="number" id="interestRateAfford" step="0.01" placeholder="e.g., 5.5">
+                            </div>
+                            <div class="form-group">
+                                <label for="loanTermAfford">Loan Term (Years)</label>
+                                <input type="number" id="loanTermAfford" value="30">
+                            </div>
+                            <button id="calculateAffordabilityBtn" class="calc-button">Calculate Affordability</button>
+                        </div>
+                        <div id="affordabilityResult" class="calculator-results"></div>
+                    `;
+                } else if (id === '#amortization-calculator') {
+                     calculatorHTML = `
+                        <div class="calculator-form">
+                            <div class="form-group">
+                                <label for="loanAmountAmort">Loan Amount ($)</label>
+                                <input type="number" id="loanAmountAmort" placeholder="e.g., 300000">
+                            </div>
+                            <div class="form-group">
+                                <label for="interestRateAmort">Interest Rate (%)</label>
+                                <input type="number" id="interestRateAmort" step="0.01" placeholder="e.g., 5.5">
+                            </div>
+                            <div class="form-group">
+                                <label for="monthlyPaymentAmort">Monthly Payment ($)</label>
+                                <input type="number" id="monthlyPaymentAmort" step="0.01" placeholder="e.g., 1600">
+                            </div>
+                             <div class="form-group">
+                                <label for="loanTermAmort">Max Loan Term (Years)</label>
+                                <input type="number" id="loanTermAmort" placeholder="e.g., 30">
+                            </div>
+                            <button id="calculateAmortizationBtn" class="calc-button">Generate Schedule</button>
+                        </div>
+                        <div id="amortization-schedule"></div>
+                    `;
+                } else {
+                    calculatorHTML = `<p>The <strong>${name}</strong> interface will be loaded here.</p>`;
+                }
+
                 calculatorContainer.innerHTML = `
                     <div class="calculator-header">
                         <h2>${name}</h2>
                     </div>
                     <div class="calculator-body" id="calculator-body-${calcId}">
-                        <p>The <strong>${name}</strong> interface will be loaded here.</p>
-                        <!-- Actual calculator form elements will go here -->
+                        ${calculatorHTML}
                     </div>
                 `;
+
+                // Add event listeners for the newly added calculator
+                if (id === '#mortgage-calculator') {
+                    document.getElementById('calculateMortgageBtn').addEventListener('click', calculateMortgage);
+                } else if (id === '#amortization-calculator') {
+                    document.getElementById('calculateAmortizationBtn').addEventListener('click', calculateAmortization);
+                } else if (id === '#mortgage-payoff-calculator') {
+                    document.getElementById('calculatePayoffBtn').addEventListener('click', calculateMortgagePayoff);
+                } else if (id === '#house-affordability-calculator') {
+                    document.getElementById('calculateAffordabilityBtn').addEventListener('click', calculateHouseAffordability);
+                }
+
                 // Update the browser's URL hash without reloading the page
                 try {
                     history.pushState(null, null, id);
