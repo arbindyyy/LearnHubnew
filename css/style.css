@@ -623,6 +623,32 @@ body.dark-theme .search-bar-modal {
     background-color: var(--background-color);
 }
 
+        .calculator-form-split {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+        @media (min-width: 768px) {
+            .calculator-form-split {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        .form-section {
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+        }
+        .form-section h3 {
+            margin-top: 0;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .form-section-full {
+            margin-top: 20px;
+        }
+
 
 /* Responsive */
 @media (max-width: 768px) {
