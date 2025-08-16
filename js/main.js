@@ -1,7 +1,12 @@
+// Shared utility function available to all calculator scripts
+function formatCurrency(value) {
+    if (typeof value !== 'number') return value;
+    return value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     const menuToggle = document.getElementById('menu-toggle');
     const sidebar = document.getElementById('sidebar');
-    const mainContent = document.getElementById('main-content');
     const categoryToggles = document.querySelectorAll('.category-toggle');
 
     // --- Core UI Logic (Sidebar, Modals, Themes, etc.) ---
@@ -58,8 +63,13 @@ document.addEventListener('DOMContentLoaded', function () {
     setupPopupToggle(langBtn, langDropdown);
     setupPopupToggle(profileBtn, profileModal);
 
-    document.body.addEventListener('click', () => closeAllPopups());
-    document.querySelector('.page-container').addEventListener('click', e => e.stopPropagation());
+    document.body.addEventListener('click', (e) => {
+        if (!e.target.closest('.dropdown-menu') && !e.target.closest('.modal')) {
+            closeAllPopups();
+        }
+    });
+    allDropdowns.forEach(d => d.addEventListener('click', e => e.stopPropagation()));
+    allModals.forEach(m => m.addEventListener('click', e => e.stopPropagation()));
 
 
     const modeButtons = document.querySelectorAll('.mode-switcher button');
@@ -138,22 +148,24 @@ document.addEventListener('DOMContentLoaded', function () {
 
         calculatorContainer.innerHTML = `
             <div class="calculator-header"><h2>${name}</h2></div>
-            <div class="calculator-body" id="calculator-body-${calcId}"><p>Loading...</p></div>`;
+            <div class="calculator-body" id="calculator-body-${calcId}"><p>Loading calculator...</p></div>`;
 
         try {
-            const response = await fetch(`calculators/${calcId}.html`);
+            const response = await fetch(`components/${calcId}/index.html`);
             if (!response.ok) throw new Error(`HTML for ${calcId} not found.`);
 
             const calculatorHTML = await response.text();
             const calculatorBody = document.getElementById(`calculator-body-${calcId}`);
             if (calculatorBody) calculatorBody.innerHTML = calculatorHTML;
 
+            // Remove any old calculator script
             const oldScript = document.getElementById('calculator-script');
             if (oldScript) oldScript.remove();
 
+            // Add new calculator script
             const script = document.createElement('script');
             script.id = 'calculator-script';
-            script.src = `js/calculators/${calcId}.js`;
+            script.src = `components/${calcId}/script.js`;
             script.defer = true;
             script.onerror = () => {
                  if (calculatorBody) calculatorBody.innerHTML = `<p>Could not load calculator logic. Please try again later.</p>`;
@@ -191,9 +203,3 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 });
-
-// Shared utility function
-function formatCurrency(value) {
-    if (typeof value !== 'number') return value;
-    return value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-}
