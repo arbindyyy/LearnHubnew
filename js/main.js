@@ -134,6 +134,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // --- Calculator Loading Logic ---
     const calculatorContainer = document.getElementById('calculator-container');
     const allCalcLinks = document.querySelectorAll('.sidebar-menu a[href^="#"]');
+    let currentCalculator = null;
 
     function setActiveLink(targetLink) {
         allCalcLinks.forEach(link => link.classList.remove('active'));
@@ -141,46 +142,41 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     async function loadCalculator(name, id) {
+        if (currentCalculator === id) return; // Don't reload the same calculator
+        currentCalculator = id;
+
         const calcId = id.substring(1);
+        const calculatorBodyId = `calculator-body-${calcId}`;
 
         const targetLink = document.querySelector(`.sidebar-menu a[href="${id}"]`);
         setActiveLink(targetLink);
 
+        // Set up the basic structure for the calculator to load into
         calculatorContainer.innerHTML = `
             <div class="calculator-header"><h2>${name}</h2></div>
-            <div class="calculator-body" id="calculator-body-${calcId}"><p>Loading calculator...</p></div>`;
+            <div class="calculator-body" id="${calculatorBodyId}"><p>Loading calculator...</p></div>`;
 
         try {
-            const response = await fetch(`components/${calcId}/index.html`);
-            if (!response.ok) throw new Error(`HTML for ${calcId} not found.`);
-
-            const calculatorHTML = await response.text();
-            const calculatorBody = document.getElementById(`calculator-body-${calcId}`);
-            if (calculatorBody) calculatorBody.innerHTML = calculatorHTML;
-
-            // Remove any old calculator script
-            const oldScript = document.getElementById('calculator-script');
-            if (oldScript) oldScript.remove();
-
-            // Add new calculator script
-            const script = document.createElement('script');
-            script.id = 'calculator-script';
-            script.src = `components/${calcId}/script.js`;
-            script.defer = true;
-            script.onerror = () => {
-                 if (calculatorBody) calculatorBody.innerHTML = `<p>Could not load calculator logic. Please try again later.</p>`;
-            };
-            document.body.appendChild(script);
+            // Dynamically import the script module for the calculator
+            const module = await import(`../components/${calcId}/script.js`);
+            if (module.init) {
+                // The module's init function is responsible for populating the container
+                module.init(calculatorBodyId);
+            } else {
+                throw new Error(`Calculator "${calcId}" does not have an init function.`);
+            }
 
         } catch (error) {
-            const calculatorBody = document.getElementById(`calculator-body-${calcId}`);
-            if(calculatorBody) calculatorBody.innerHTML = `<p>Error: ${error.message}</p>`;
+            const calculatorBody = document.getElementById(calculatorBodyId);
+            if(calculatorBody) calculatorBody.innerHTML = `<p>Error loading calculator: ${error.message}</p>`;
             console.error('Error loading calculator:', error);
         }
 
         try {
             history.pushState(null, null, id);
-        } catch (e) {}
+        } catch (e) {
+            // Silently fail on environments that don't support pushState
+        }
     }
 
     allCalcLinks.forEach(link => {
@@ -192,7 +188,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    if (window.location.hash) {
+    if (window.location.hash && window.location.hash !== '#') {
         const initialLink = document.querySelector(`.sidebar-menu a[href="${window.location.hash}"]`);
         if (initialLink && !initialLink.classList.contains('category-toggle')) {
             loadCalculator(initialLink.textContent, window.location.hash);
@@ -201,5 +197,8 @@ document.addEventListener('DOMContentLoaded', function () {
                parentCategory.classList.add('open');
            }
         }
+    } else {
+        // Load a default message or the first calculator
+        calculatorContainer.innerHTML = `<h2>Welcome to the All-in-One Calculator!</h2><p>Select a calculator from the menu to get started.</p>`;
     }
 });
